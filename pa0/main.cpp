@@ -4,11 +4,12 @@
 #include <iostream>
 
 int main() {
+#if 0
     // Basic Example of cpp
     std::cout << "Example of cpp \n";
     float a = 1.0, b = 2.0;
-    printf("%d\n", a);
-    // std::cout << a << std::endl;
+
+    std::cout << a << std::endl;
     std::cout << a / b << std::endl;
     std::cout << std::sqrt(b) << std::endl;
     std::cout << std::acos(-1) << std::endl;
@@ -43,6 +44,28 @@ int main() {
     // matrix scalar multiply i * 2.0
     // matrix multiply i * j
     // matrix multiply vector i * v
+#endif
+
+    Eigen::Vector3d P(2, 1, 1);
+
+    double rad = 45 / 180.0 * M_PI;
+
+    Eigen::Matrix3d roatate;
+    roatate << cos(rad), -sin(rad), 0,
+        sin(rad), cos(rad), 0,
+        0, 0, 1;
+
+    Eigen::Matrix3d translate;
+    translate << 1, 0, 1,
+        0, 1, 2,
+        0, 0, 1;
+
+    Eigen::Matrix3d combined = translate * roatate;
+
+    // std::cout << combined << std::endl;
+
+    P = combined * P;
+    printf("P: (%f, %f)\n", P.x(), P.y());
 
     return 0;
 }
