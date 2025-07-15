@@ -5,7 +5,8 @@
 #include <opencv2/opencv.hpp>
 
 constexpr double MY_PI = 3.1415926;
-#define rad(angle) (angle / 180.0f * MY_PI)
+#define rad(angle)        (angle / 180.0f * MY_PI)
+#define rad_to_angle(rad) (rad * 180.0f / MY_PI)
 
 Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos) {
     Eigen::Matrix4f view = Eigen::Matrix4f::Identity();
@@ -21,23 +22,46 @@ Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos) {
     return view;
 }
 
-Eigen::Matrix4f get_model_matrix(float rotation_angle) {
-    // 逐个元素地构建模型变换矩阵并返回该矩阵。在此函数中，你只需要实现三维中绕 z 轴旋转的变换矩阵，而不用处理平移与缩放
-    // Create the model matrix for rotating the triangle around the Z axis.
-    // Then return it.
-
-    Eigen::Matrix4f model;
-    // cos, -sin, 0, 0
-    // sin,  cos, 0, 0
-    //   0,    0, 1, 0
-    //   0,    0, 0, 1
+Eigen::Matrix4f rotate_x(float rotation_angle) {
     float rad = rad(rotation_angle);
-    model << cos(rad), -sin(rad), 0, 0,
+    Eigen::Matrix4f rotate;
+    rotate << 1, 0, 0, 0,
+        0, cos(rad), -sin(rad), 0,
+        0, sin(rad), cos(rad), 0,
+        0, 0, 0, 1;
+    return rotate;
+}
+
+Eigen::Matrix4f rotate_y(float rotation_angle) {
+    float rad = rad(rotation_angle);
+    Eigen::Matrix4f rotate;
+    rotate << cos(rad), 0, -sin(rad), 0,
+        0, 1, 0, 0,
+        sin(rad), 0, cos(rad), 0,
+        0, 0, 0, 1;
+    return rotate;
+}
+
+Eigen::Matrix4f rotate_z(float rotation_angle) {
+    float rad = rad(rotation_angle);
+    Eigen::Matrix4f rotate;
+    rotate << cos(rad), -sin(rad), 0, 0,
         sin(rad), cos(rad), 0, 0,
         0, 0, 1, 0,
         0, 0, 0, 1;
+    return rotate;
+}
 
-    return model;
+Eigen::Matrix4f get_model_matrix(float angle_x, float angle_y, float angle_z) {
+    return rotate_x(angle_x) * rotate_y(angle_y) * rotate_z(angle_z);
+}
+
+Eigen::Matrix4f get_rotation(Vector3f axis, float angle) {
+    float theta_1 = atan2(axis.y(), axis.x());
+    Eigen::Matrix4f axis_to_xz_plane = rotate_z(rad_to_angle(theta_1));
+    float theta_2 = atan2(sqrt(axis.x() * axis.x() + axis.y() * axis.y()), axis.z());
+    Eigen::Matrix4f to_z = rotate_y(rad_to_angle(theta_2));
+    return axis_to_xz_plane.inverse() * to_z.inverse() * rotate_z(angle) * to_z * axis_to_xz_plane;
 }
 
 Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float zNear, float zFar) {
@@ -70,28 +94,25 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
     return projection;
 }
 
+#define CANVAS_SIZE 200
 // TODO 理解Viewport变换的实现
 int main(int argc, const char **argv) {
-    float angle = 0;
-    bool command_line = false;
-    std::string filename = "output.png";
+    Eigen::Vector3f axis;
+    // TODO test
+    Eigen::Matrix4f trans = get_rotation();
+    return 0;
 
-    if (argc >= 3) {
-        command_line = true;
-        angle = std::stof(argv[2]);  // -r by default
-        if (argc == 4) {
-            filename = std::string(argv[3]);
-        } else
-            return 0;
-    }
+    float angle_x = 0;
+    float angle_y = 0;
+    float angle_z = 0;
 
-    rst::rasterizer r(700, 700);
+    rst::rasterizer r(CANVAS_SIZE, CANVAS_SIZE);
 
     Eigen::Vector3f eye_pos = {0, 0, 5};
 
-    std::vector<Eigen::Vector3f> pos{{2, 0, -2}, {0, 2, -2}, {-2, 0, -2}};
+    std::vector<Eigen::Vector3f> pos{{0, 1, 0}, {2, 0, -2}, {0, 2, -2}, {-2, 0, -2}};
 
-    std::vector<Eigen::Vector3i> ind{{0, 1, 2}};
+    std::vector<Eigen::Vector3i> ind{{0, 1, 2}, {0, 1, 3}, {0, 2, 3}, {1, 2, 3}};
 
     auto pos_id = r.load_positions(pos);
     auto ind_id = r.load_indices(ind);
@@ -103,33 +124,18 @@ int main(int argc, const char **argv) {
     float zFar = -50;
     // int frame_count = 0;
 
-    if (command_line) {
-        r.clear(rst::Buffers::Color | rst::Buffers::Depth);
-
-        r.set_model(get_model_matrix(angle));
-        r.set_view(get_view_matrix(eye_pos));
-        r.set_projection(get_projection_matrix(eye_fov, aspect_ratio, zNear, zFar));
-
-        r.draw(pos_id, ind_id, rst::Primitive::Triangle);
-        cv::Mat image(700, 700, CV_32FC3, r.frame_buffer().data());
-        image.convertTo(image, CV_8UC3, 1.0f);
-
-        cv::imwrite(filename, image);
-
-        return 0;
-    }
-
     while (1) {
-        printf("angle: %f, eye_fov: %f, aspect_ratio: %f, zNear: %f, zFar: %f\n", angle, eye_fov, aspect_ratio, zNear, zFar);
+        printf("angle_x: %f, angle_y: %f, angle_z: %f\n", angle_x, angle_y, angle_z);
+        printf("eye_fov: %f, aspect_ratio: %f, zNear: %f, zFar: %f\n", eye_fov, aspect_ratio, zNear, zFar);
         r.clear(rst::Buffers::Color | rst::Buffers::Depth);
 
-        r.set_model(get_model_matrix(angle));
+        r.set_model(get_model_matrix(angle_x, angle_y, angle_z));
         r.set_view(get_view_matrix(eye_pos));
         r.set_projection(get_projection_matrix(eye_fov, aspect_ratio, zNear, zFar));
 
         r.draw(pos_id, ind_id, rst::Primitive::Triangle);
 
-        cv::Mat image(700, 700, CV_32FC3, r.frame_buffer().data());
+        cv::Mat image(CANVAS_SIZE, CANVAS_SIZE, CV_32FC3, r.frame_buffer().data());
         image.convertTo(image, CV_8UC3, 1.0f);
         cv::imshow("image", image);
         // std::cout << "frame count: " << frame_count++ << '\n';
@@ -139,10 +145,22 @@ int main(int argc, const char **argv) {
 
         switch (key) {
             case 'a':
-                angle += 10;
+                angle_z += 10;
                 break;
             case 'd':
-                angle -= 10;
+                angle_z -= 10;
+                break;
+            case 'w':
+                angle_y += 10;
+                break;
+            case 's':
+                angle_y -= 10;
+                break;
+            case 'q':
+                angle_x += 10;
+                break;
+            case 'e':
+                angle_x -= 10;
                 break;
             case '1':
                 eye_fov -= 1;

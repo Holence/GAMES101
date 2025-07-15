@@ -31,7 +31,8 @@ void Triangle::setColor(int ind, float r, float g, float b) {
         throw std::runtime_error("Invalid color values");
     }
 
-    color[ind] = Vector3f((float)r / 255., (float)g / 255., (float)b / 255.);
+    // color[ind] = Vector3f((float)r / 255., (float)g / 255., (float)b / 255.);
+    color[ind] = Vector3f((float)r, (float)g, (float)b);
     return;
 }
 void Triangle::setTexCoord(int ind, float s, float t) {

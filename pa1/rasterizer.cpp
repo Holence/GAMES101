@@ -24,13 +24,14 @@ rst::ind_buf_id rst::rasterizer::load_indices(const std::vector<Eigen::Vector3i>
 
 // Bresenham's line drawing algorithm
 // Code taken from a stack overflow answer: https://stackoverflow.com/a/16405254
-void rst::rasterizer::draw_line(Eigen::Vector3f begin, Eigen::Vector3f end) {
+void rst::rasterizer::draw_line(Eigen::Vector3f begin, Eigen::Vector3f end, Eigen::Vector3f line_color) {
     auto x1 = begin.x();
     auto y1 = begin.y();
     auto x2 = end.x();
     auto y2 = end.y();
 
-    Eigen::Vector3f line_color = {255, 255, 255};
+    // TODO color in Triangle??
+    // Eigen::Vector3f line_color = {255, 255, 255};
 
     int x, y, dx, dy, dx1, dy1, px, py, xe, ye, i;
 
@@ -51,7 +52,7 @@ void rst::rasterizer::draw_line(Eigen::Vector3f begin, Eigen::Vector3f end) {
             y = y2;
             xe = x1;
         }
-        Eigen::Vector3f point = Eigen::Vector3f(x, y, 1.0f);
+        Eigen::Vector3f point = Eigen::Vector3f(x, y, 1.0f);  // z is ignored!!
         set_pixel(point, line_color);
         for (i = 0; x < xe; i++) {
             x = x + 1;
@@ -124,10 +125,13 @@ void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffe
             mvp * to_vec4(buf[i[2]], 1.0f)
         };
 
+        // pos mapped to [-1, 1]^3
         for (auto &vec : v) {
             vec /= vec.w();
         }
 
+        // x, y from [-1, 1]^3 to [width, height]
+        // TODO z???
         for (auto &vert : v) {
             vert.x() = 0.5 * width * (vert.x() + 1.0);
             vert.y() = 0.5 * height * (vert.y() + 1.0);
@@ -136,8 +140,9 @@ void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffe
 
         for (int i = 0; i < 3; ++i) {
             t.setVertex(i, v[i].head<3>());
-            t.setVertex(i, v[i].head<3>());
-            t.setVertex(i, v[i].head<3>());
+            // TODO why another 2 times???
+            // t.setVertex(i, v[i].head<3>());
+            // t.setVertex(i, v[i].head<3>());
         }
 
         t.setColor(0, 255.0, 0.0, 0.0);
@@ -149,9 +154,9 @@ void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffe
 }
 
 void rst::rasterizer::rasterize_wireframe(const Triangle &t) {
-    draw_line(t.c(), t.a());
-    draw_line(t.c(), t.b());
-    draw_line(t.b(), t.a());
+    draw_line(t.c(), t.a(), t.color[0]);
+    draw_line(t.c(), t.b(), t.color[1]);
+    draw_line(t.b(), t.a(), t.color[2]);
 }
 
 void rst::rasterizer::set_model(const Eigen::Matrix4f &m) {
