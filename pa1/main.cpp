@@ -70,8 +70,8 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
     // Then return it.
     Eigen::Matrix4f projection = Eigen::Matrix4f::Identity();
 
-    float n = zNear;
-    float f = zFar;
+    float n = -zNear;
+    float f = -zFar;
     float t = abs(n) * tan(rad(eye_fov / 2));
     float b = -t;
     float r = aspect_ratio * t;
@@ -94,17 +94,14 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
     return projection;
 }
 
-#define CANVAS_SIZE 200
-// TODO 理解Viewport变换的实现
+#define CANVAS_SIZE 800
 int main(int argc, const char **argv) {
-    Eigen::Vector3f axis;
-    // TODO test
-    Eigen::Matrix4f trans = get_rotation();
-    return 0;
-
     float angle_x = 0;
     float angle_y = 0;
     float angle_z = 0;
+
+    Eigen::Vector3f axis(1, 1, 1);
+    float angle_r = 0;
 
     rst::rasterizer r(CANVAS_SIZE, CANVAS_SIZE);
 
@@ -120,16 +117,16 @@ int main(int argc, const char **argv) {
     int key = 0;
     float eye_fov = 45;
     float aspect_ratio = 1;
-    float zNear = -0.1;
-    float zFar = -50;
-    // int frame_count = 0;
+    float zNear = 0.1;
+    float zFar = 50;
 
     while (1) {
-        printf("angle_x: %f, angle_y: %f, angle_z: %f\n", angle_x, angle_y, angle_z);
-        printf("eye_fov: %f, aspect_ratio: %f, zNear: %f, zFar: %f\n", eye_fov, aspect_ratio, zNear, zFar);
+        printf("eye_pos: (%f, %f, %f)\n", eye_pos.x(), eye_pos.y(), eye_pos.z());
+        printf("angle_x: %f, angle_y: %f, angle_z: %f, angle_r: %f\n", angle_x, angle_y, angle_z, angle_r);
+        printf("eye_fov: %f, aspect_ratio: %f, zNear: %f, zFar: %f\n\n", eye_fov, aspect_ratio, zNear, zFar);
         r.clear(rst::Buffers::Color | rst::Buffers::Depth);
 
-        r.set_model(get_model_matrix(angle_x, angle_y, angle_z));
+        r.set_model(get_rotation(axis, angle_r) * get_model_matrix(angle_x, angle_y, angle_z));
         r.set_view(get_view_matrix(eye_pos));
         r.set_projection(get_projection_matrix(eye_fov, aspect_ratio, zNear, zFar));
 
@@ -138,7 +135,6 @@ int main(int argc, const char **argv) {
         cv::Mat image(CANVAS_SIZE, CANVAS_SIZE, CV_32FC3, r.frame_buffer().data());
         image.convertTo(image, CV_8UC3, 1.0f);
         cv::imshow("image", image);
-        // std::cout << "frame count: " << frame_count++ << '\n';
 
     wait_key:
         key = cv::waitKey(0);
@@ -161,6 +157,12 @@ int main(int argc, const char **argv) {
                 break;
             case 'e':
                 angle_x -= 10;
+                break;
+            case 'r':
+                angle_r += 10;
+                break;
+            case 'f':
+                angle_r -= 10;
                 break;
             case '1':
                 eye_fov -= 1;
@@ -185,6 +187,24 @@ int main(int argc, const char **argv) {
                 break;
             case '8':
                 zFar += 5;
+                break;
+            case '-':
+                eye_pos.x() -= 1;
+                break;
+            case '=':
+                eye_pos.x() += 1;
+                break;
+            case '[':
+                eye_pos.y() -= 1;
+                break;
+            case ']':
+                eye_pos.y() += 1;
+                break;
+            case ';':
+                eye_pos.z() -= 1;
+                break;
+            case '\'':
+                eye_pos.z() += 1;
                 break;
             case 27:
                 goto exit;

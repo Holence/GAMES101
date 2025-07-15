@@ -116,9 +116,18 @@ void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffe
     float f2 = (100 + 0.1) / 2.0;
 
     Eigen::Matrix4f mvp = projection * view * model;
+    // std::cout << "projection\n"
+    //           << projection << std::endl;
+    // std::cout << "view\n"
+    //           << view << std::endl;
+    // std::cout << "model\n"
+    //           << model << std::endl;
+    // std::cout << "mvp\n"
+    //           << mvp << std::endl;
     for (auto &i : ind) {
         Triangle t;
 
+        // pos transfered by mvp
         Eigen::Vector4f v[] = {
             mvp * to_vec4(buf[i[0]], 1.0f),
             mvp * to_vec4(buf[i[1]], 1.0f),
@@ -131,11 +140,12 @@ void rst::rasterizer::draw(rst::pos_buf_id pos_buffer, rst::ind_buf_id ind_buffe
         }
 
         // x, y from [-1, 1]^3 to [width, height]
-        // TODO z???
+        // x' = (width/2) * x + (width/2)
+        // y' = (height/2) * y + (height/2)
         for (auto &vert : v) {
             vert.x() = 0.5 * width * (vert.x() + 1.0);
             vert.y() = 0.5 * height * (vert.y() + 1.0);
-            vert.z() = vert.z() * f1 + f2;
+            // vert.z() = vert.z() * f1 + f2; // z is ignored!!
         }
 
         for (int i = 0; i < 3; ++i) {
@@ -191,8 +201,8 @@ int rst::rasterizer::get_index(int x, int y) {
 
 void rst::rasterizer::set_pixel(const Eigen::Vector3f &point, const Eigen::Vector3f &color) {
     // old index: auto ind = point.y() + point.x() * width;
-    if (point.x() < 0 || point.x() >= width ||
-        point.y() < 0 || point.y() >= height) return;
+    if (point.x() <= 0 || point.x() >= width ||
+        point.y() <= 0 || point.y() >= height) return;
     auto ind = (height - point.y()) * width + point.x();
     frame_buf[ind] = color;
 }
