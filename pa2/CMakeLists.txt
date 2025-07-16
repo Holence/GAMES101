@@ -6,7 +6,7 @@ find_package(OpenCV REQUIRED)
 set(CMAKE_CXX_STANDARD 17)
 
 # add -g to CFLAG
-set(CMAKE_BUILD_TYPE Debug)
+# set(CMAKE_BUILD_TYPE Debug)
 
 include_directories(/usr/local/include)
 

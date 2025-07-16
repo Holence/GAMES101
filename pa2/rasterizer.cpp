@@ -34,8 +34,14 @@ auto to_vec4(const Eigen::Vector3f &v3, float w = 1.0f) {
 }
 
 static bool insideTriangle(int x, int y, const Vector3f *_v) {
-    // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
-    return true;
+    // Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
+    Vector3f p(x + 0.5, y + 0.5, 1);
+
+    float z0 = (_v[1] - _v[0]).cross(p - _v[0]).z();
+    float z1 = (_v[2] - _v[1]).cross(p - _v[1]).z();
+    float z2 = (_v[0] - _v[2]).cross(p - _v[2]).z();
+
+    return (z0 > 0 && z1 > 0 && z2 > 0) || (z0 < 0 && z1 < 0 && z2 < 0);
 }
 
 static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector3f *v) {
@@ -64,6 +70,7 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
         // Homogeneous division
         for (auto &vec : v) {
             vec /= vec.w();
+            vec.z() *= -1;  // 勾八框架非要把z轴看成正数，我只好在这里给你翻转了
         }
         // Viewport transformation
         for (auto &vert : v) {
@@ -94,16 +101,20 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
 void rst::rasterizer::rasterize_triangle(const Triangle &t) {
     auto v = t.toVector4();
 
-    // TODO : Find out the bounding box of current triangle.
+    // Find out the bounding box of current triangle.
     // iterate through the pixel and find if the current pixel is inside the triangle
-    int x_min = 0, x_max = height;
-    int y_min = 0, y_max = height;
+    int x_min = width - 1, x_max = 0;
+    int y_min = height - 1, y_max = 0;
     for (auto vec : v) {
         x_min = MIN(vec.x(), x_min);
         x_max = MAX(vec.x(), x_max);
         y_min = MIN(vec.y(), y_min);
         y_max = MAX(vec.y(), y_max);
     }
+    x_min = MAX(x_min, 0);
+    x_max = MIN(x_max, width - 1);
+    y_min = MAX(y_min, 0);
+    y_max = MIN(y_max, height - 1);
 
     for (int x = x_min; x <= x_max; x++) {
         for (int y = y_min; y <= y_max; y++) {
