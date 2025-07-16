@@ -35,6 +35,7 @@ auto to_vec4(const Eigen::Vector3f &v3, float w = 1.0f) {
 
 static bool insideTriangle(int x, int y, const Vector3f *_v) {
     // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
+    return true;
 }
 
 static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector3f *v) {
@@ -95,14 +96,33 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t) {
 
     // TODO : Find out the bounding box of current triangle.
     // iterate through the pixel and find if the current pixel is inside the triangle
+    int x_min = 0, x_max = height;
+    int y_min = 0, y_max = height;
+    for (auto vec : v) {
+        x_min = MIN(vec.x(), x_min);
+        x_max = MAX(vec.x(), x_max);
+        y_min = MIN(vec.y(), y_min);
+        y_max = MAX(vec.y(), y_max);
+    }
 
-    // If so, use the following code to get the interpolated z value.
-    // auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
-    // float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-    // float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-    // z_interpolated *= w_reciprocal;
-
-    // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
+    for (int x = x_min; x <= x_max; x++) {
+        for (int y = y_min; y <= y_max; y++) {
+            if (insideTriangle(x, y, t.v)) {
+                // If so, use the following code to get the interpolated z value.
+                // TODO 待理解
+                auto [alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
+                float w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                z_interpolated *= w_reciprocal;
+                // set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
+                int ind = get_index(x, y);
+                if (z_interpolated < depth_buf[ind]) {
+                    depth_buf[ind] = z_interpolated;
+                    frame_buf[ind] = t.getColor();
+                }
+            }
+        }
+    }
 }
 
 void rst::rasterizer::set_model(const Eigen::Matrix4f &m) {
