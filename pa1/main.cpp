@@ -61,7 +61,13 @@ Eigen::Matrix4f get_rotation(Vector3f axis, float angle) {
     Eigen::Matrix4f axis_to_xz_plane = rotate_z(rad_to_angle(theta_1));
     float theta_2 = atan2(sqrt(axis.x() * axis.x() + axis.y() * axis.y()), axis.z());
     Eigen::Matrix4f to_z = rotate_y(rad_to_angle(theta_2));
-    return axis_to_xz_plane.inverse() * to_z.inverse() * rotate_z(angle) * to_z * axis_to_xz_plane;
+
+    // 旋转矩阵的 transpose==inverse
+    // assert(axis_to_xz_plane.inverse().isApprox(axis_to_xz_plane.transpose()));
+    // assert(to_z.inverse().isApprox(to_z.transpose()));
+
+    // return axis_to_xz_plane.inverse() * to_z.inverse() * rotate_z(angle) * to_z * axis_to_xz_plane;
+    return axis_to_xz_plane.transpose() * to_z.transpose() * rotate_z(angle) * to_z * axis_to_xz_plane;
 }
 
 Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float zNear, float zFar) {
