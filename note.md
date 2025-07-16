@@ -41,7 +41,7 @@ $(x,y,z,w) == (\frac{x}{w},\frac{y}{w},\frac{z}{w},1)$
 
 ## 变换
 
-目的：把三维世界看到的影像投影到相机的二维幕布上
+目的：把三维世界的点$p$，变换到二维屏幕上的点$p^\prime$（并带有深度信息）
 
 变换矩阵 $M = M_{vp} M_{proj} M_{cam} M_{model}$
 
@@ -102,13 +102,17 @@ $(x,y,z,w) == (\frac{x}{w},\frac{y}{w},\frac{z}{w},1)$
      =
      \begin{bmatrix}
       \frac{2}{r-l} & 0 & 0 & -\frac{r+l}{r-l}\\
-      0 & \frac{2}{t-b} & 0 & -\frac{r+l}{t-b}\\
-      0 & 0 & \frac{2}{n-f} & -\frac{r+l}{n-f}\\
+      0 & \frac{2}{t-b} & 0 & -\frac{t+b}{t-b}\\
+      0 & 0 & \frac{2}{n-f} & -\frac{n+f}{n-f}\\
       0 & 0 & 0 & 1
      \end{bmatrix}
      $$
      
    - 透视投影 Perspective Projection
+     
+     先把视锥压扁（也就是把所有切面都缩小到与近平面$z=n$等大，变成和正交投影初始状态一样的3D空间），然后再调用正交投影的变换矩阵
+     
+     ![](./img/M_pers_to_orth.jpeg)
      $$
      M_{pers\to orth} =
      \begin{bmatrix}
@@ -121,8 +125,8 @@ $(x,y,z,w) == (\frac{x}{w},\frac{y}{w},\frac{z}{w},1)$
      M_{proj} = M_{orth} * M_{pers\to orth} = \\
      \begin{bmatrix}
       \frac{2}{r-l} & 0 & 0 & -\frac{r+l}{r-l}\\
-      0 & \frac{2}{t-b} & 0 & -\frac{r+l}{t-b}\\
-      0 & 0 & \frac{2}{n-f} & -\frac{r+l}{n-f}\\
+      0 & \frac{2}{t-b} & 0 & -\frac{t+b}{t-b}\\
+      0 & 0 & \frac{2}{n-f} & -\frac{n+f}{n-f}\\
       0 & 0 & 0 & 1
      \end{bmatrix}
      \begin{bmatrix}
@@ -147,4 +151,30 @@ $(x,y,z,w) == (\frac{x}{w},\frac{y}{w},\frac{z}{w},1)$
    \end{bmatrix}
    $$
    
-   ❓z轴到这里被忽略掉了？
+   z轴的深度信息保留不变，在**光栅化**里才会用到
+
+## 光栅化成像
+
+**变换**后得到了许多带有深度信息的点，这些点两两之间可以构成线段，三三之间可以构成三角形
+
+目的：计算出线段或三角形在屏幕上勾勒出的像素范围，利用深度信息区分出遮挡关系、着色❓
+
+（可以物块颜色，绘制出遮挡关系了）
+
+### 三角形的光栅化
+
+一个个像素去采样
+
+### 深度信息
+
+z-buffer
+
+### 抗锯齿
+
+Anti Aliasing
+
+- MSAA
+- FSAA
+- TAA
+
+### 着色
