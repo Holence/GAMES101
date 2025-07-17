@@ -82,7 +82,7 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
     return projection;
 }
 
-#define CANVAS_SIZE 400
+#define CANVAS_SIZE 200
 int main(int argc, const char **argv) {
     float angle_x = 0;
     float angle_y = 0;
@@ -187,22 +187,22 @@ int main(int argc, const char **argv) {
             case '8':
                 zFar += 5;
                 break;
-            case '-':
+            case 81:  // left key
                 eye_pos.x() -= 1;
                 break;
-            case '=':
+            case 83:  // right key
                 eye_pos.x() += 1;
                 break;
-            case '[':
+            case 84:  // down key
                 eye_pos.y() -= 1;
                 break;
-            case ']':
+            case 82:  // up key
                 eye_pos.y() += 1;
                 break;
-            case ';':
+            case '-':
                 eye_pos.z() -= 1;
                 break;
-            case '\'':
+            case '=':
                 eye_pos.z() += 1;
                 break;
             case 27:

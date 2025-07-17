@@ -144,7 +144,6 @@ int main(int argc, const char **argv) {
 
     wait_key:
         key = cv::waitKey(0);
-
         switch (key) {
             case 'a':
                 angle_z += 10;
@@ -194,22 +193,22 @@ int main(int argc, const char **argv) {
             case '8':
                 zFar += 5;
                 break;
-            case '-':
+            case 81:  // left key
                 eye_pos.x() -= 1;
                 break;
-            case '=':
+            case 83:  // right key
                 eye_pos.x() += 1;
                 break;
-            case '[':
+            case 84:  // down key
                 eye_pos.y() -= 1;
                 break;
-            case ']':
+            case 82:  // up key
                 eye_pos.y() += 1;
                 break;
-            case ';':
+            case '-':
                 eye_pos.z() -= 1;
                 break;
-            case '\'':
+            case '=':
                 eye_pos.z() += 1;
                 break;
             case 27:
