@@ -152,16 +152,16 @@ int main(int argc, const char **argv) {
             case 'd':
                 angle_z -= 10;
                 break;
-            case 'w':
+            case 'e':
                 angle_y += 10;
                 break;
-            case 's':
+            case 'q':
                 angle_y -= 10;
                 break;
-            case 'q':
+            case 's':
                 angle_x += 10;
                 break;
-            case 'e':
+            case 'w':
                 angle_x -= 10;
                 break;
             case 'r':

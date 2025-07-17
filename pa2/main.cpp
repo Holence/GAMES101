@@ -21,9 +21,38 @@ Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos) {
     return view;
 }
 
-Eigen::Matrix4f get_model_matrix(float rotation_angle) {
-    Eigen::Matrix4f model = Eigen::Matrix4f::Identity();
-    return model;
+Eigen::Matrix4f rotate_x(float rotation_angle) {
+    float rad = rad(rotation_angle);
+    Eigen::Matrix4f rotate;
+    rotate << 1, 0, 0, 0,
+        0, cos(rad), -sin(rad), 0,
+        0, sin(rad), cos(rad), 0,
+        0, 0, 0, 1;
+    return rotate;
+}
+
+Eigen::Matrix4f rotate_y(float rotation_angle) {
+    float rad = rad(rotation_angle);
+    Eigen::Matrix4f rotate;
+    rotate << cos(rad), 0, -sin(rad), 0,
+        0, 1, 0, 0,
+        sin(rad), 0, cos(rad), 0,
+        0, 0, 0, 1;
+    return rotate;
+}
+
+Eigen::Matrix4f rotate_z(float rotation_angle) {
+    float rad = rad(rotation_angle);
+    Eigen::Matrix4f rotate;
+    rotate << cos(rad), -sin(rad), 0, 0,
+        sin(rad), cos(rad), 0, 0,
+        0, 0, 1, 0,
+        0, 0, 0, 1;
+    return rotate;
+}
+
+Eigen::Matrix4f get_model_matrix(float angle_x, float angle_y, float angle_z) {
+    return rotate_x(angle_x) * rotate_y(angle_y) * rotate_z(angle_z);
 }
 
 Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float zNear, float zFar) {
@@ -53,10 +82,13 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
     return projection;
 }
 
+#define CANVAS_SIZE 400
 int main(int argc, const char **argv) {
-    float angle = 0;
+    float angle_x = 0;
+    float angle_y = 0;
+    float angle_z = 0;
 
-    rst::rasterizer r(700, 700);
+    rst::rasterizer r(CANVAS_SIZE, CANVAS_SIZE);
 
     Eigen::Vector3f eye_pos = {0, 0, 5};
 
@@ -93,19 +125,19 @@ int main(int argc, const char **argv) {
     float zNear = -0.1;
     float zFar = -50;
 
-    // TODO get_rotation
     while (1) {
         printf("eye_pos: (%f, %f, %f)\n", eye_pos.x(), eye_pos.y(), eye_pos.z());
+        printf("angle_x: %f, angle_y: %f, angle_z: %f\n", angle_x, angle_y, angle_z);
         printf("eye_fov: %f, aspect_ratio: %f, zNear: %f, zFar: %f\n\n", eye_fov, aspect_ratio, zNear, zFar);
         r.clear(rst::Buffers::Color | rst::Buffers::Depth);
 
-        r.set_model(get_model_matrix(angle));
+        r.set_model(get_model_matrix(angle_x, angle_y, angle_z));
         r.set_view(get_view_matrix(eye_pos));
         r.set_projection(get_projection_matrix(eye_fov, aspect_ratio, zNear, zFar));
 
         r.draw(pos_id, ind_id, col_id, rst::Primitive::Triangle);
 
-        cv::Mat image(700, 700, CV_32FC3, r.frame_buffer().data());
+        cv::Mat image(CANVAS_SIZE, CANVAS_SIZE, CV_32FC3, r.frame_buffer().data());
         image.convertTo(image, CV_8UC3, 1.0f);
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
         cv::imshow("image", image);
@@ -113,6 +145,24 @@ int main(int argc, const char **argv) {
     wait_key:
         key = cv::waitKey(0);
         switch (key) {
+            case 'a':
+                angle_z += 10;
+                break;
+            case 'd':
+                angle_z -= 10;
+                break;
+            case 'e':
+                angle_y += 10;
+                break;
+            case 'q':
+                angle_y -= 10;
+                break;
+            case 's':
+                angle_x += 10;
+                break;
+            case 'w':
+                angle_x -= 10;
+                break;
             case '1':
                 eye_fov -= 1;
                 break;
