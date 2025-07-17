@@ -100,7 +100,7 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
     return projection;
 }
 
-#define CANVAS_SIZE 800
+#define CANVAS_SIZE 500
 int main(int argc, const char **argv) {
     float angle_x = 0;
     float angle_y = 0;

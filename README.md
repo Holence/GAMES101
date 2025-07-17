@@ -11,3 +11,9 @@ cd build
 cmake ..
 make
 ```
+
+## Show
+
+![](./pa1/pa1.png)
+
+![](./pa2/pa2.png)
