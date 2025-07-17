@@ -82,7 +82,7 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
     return projection;
 }
 
-#define CANVAS_SIZE 200
+#define CANVAS_SIZE 500
 int main(int argc, const char **argv) {
     float angle_x = 0;
     float angle_y = 0;
@@ -90,29 +90,56 @@ int main(int argc, const char **argv) {
 
     rst::rasterizer r(CANVAS_SIZE, CANVAS_SIZE);
 
-    Eigen::Vector3f eye_pos = {0, 0, 5};
+    Eigen::Vector3f eye_pos = {0, 0, 7.5};
 
+    // std::vector<Eigen::Vector3f> pos{
+    //     {2, 0, -2},
+    //     {0, 2, -2},
+    //     {-2, 0, -2},
+    //     {3.5, -1, -5},
+    //     {2.5, 1.5, -5},
+    //     {-1, 0.5, -5}
+    // };
+
+    // std::vector<Eigen::Vector3i> ind{
+    //     {0, 1, 2},
+    //     {3, 4, 5}
+    // };
+
+    // std::vector<Eigen::Vector3f> cols{
+    //     {217.0, 238.0, 185.0},
+    //     {185.0, 217.0, 238.0}
+    // };
+
+    // Three Overlapping Triangles
+#define s3 (sqrt(3))
     std::vector<Eigen::Vector3f> pos{
-        {2, 0, -2},
-        {0, 2, -2},
-        {-2, 0, -2},
-        {3.5, -1, -5},
-        {2.5, 1.5, -5},
-        {-1, 0.5, -5}
+        {2, -s3, -2},
+        {-1, 2 * s3, -1},
+        {0, 2 * s3, -1},
+
+        {-3, 0, -2},
+        {3, 0, -1},
+        {2.5, s3 / 2, -1},
+
+        {1, 2 * s3, -2},
+        {-2, -s3, -1},
+        {-2.5, -s3 / 2, -1},
     };
+    for (auto &v : pos) {
+        v.y() -= 1 / s3;
+    }
 
     std::vector<Eigen::Vector3i> ind{
         {0, 1, 2},
-        {3, 4, 5}
+        {3, 4, 5},
+        {6, 7, 8},
     };
 
     std::vector<Eigen::Vector3f> cols{
         {217.0, 238.0, 185.0},
-        {217.0, 238.0, 185.0},
-        {217.0, 238.0, 185.0},
         {185.0, 217.0, 238.0},
-        {185.0, 217.0, 238.0},
-        {185.0, 217.0, 238.0}
+        {238.0, 185.0, 217.0}
     };
 
     auto pos_id = r.load_positions(pos);

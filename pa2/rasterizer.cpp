@@ -68,6 +68,7 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
     float f1 = (50 - 0.1) / 2.0;
     float f2 = (50 + 0.1) / 2.0;
 
+    size_t counter = 0;
     Eigen::Matrix4f mvp = projection * view * model;
     for (auto &i : ind) {
         Triangle t;
@@ -94,13 +95,8 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
             t.setVertex(i, v[i].head<3>());
         }
 
-        auto col_x = col[i[0]];
-        auto col_y = col[i[1]];
-        auto col_z = col[i[2]];
-
-        t.setColor(0, col_x[0], col_x[1], col_x[2]);
-        t.setColor(1, col_y[0], col_y[1], col_y[2]);
-        t.setColor(2, col_z[0], col_z[1], col_z[2]);
+        auto color = col[counter++];
+        t.setColor(color[0], color[1], color[2]);
 
         rasterize_triangle(t);
     }
@@ -142,7 +138,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t) {
                     float z_interpolated = computeZInterpolate(xx, yy, v);
                     if (z_interpolated < depth_buf[ind]) {
                         depth_buf[ind] = z_interpolated;
-                        SSAA_frame_buf[ind] = t.getColor();
+                        SSAA_frame_buf[ind] = t.color;
                     }
                 }
                 ind++;
@@ -159,7 +155,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t) {
                 int ind = get_index(x, y);
                 if (z_interpolated < depth_buf[ind]) {
                     depth_buf[ind] = z_interpolated;
-                    frame_buf[ind] = t.getColor();
+                    frame_buf[ind] = t.color;
                 }
             }
         }
