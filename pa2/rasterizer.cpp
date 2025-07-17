@@ -33,22 +33,31 @@ auto to_vec4(const Eigen::Vector3f &v3, float w = 1.0f) {
     return Vector4f(v3.x(), v3.y(), v3.z(), w);
 }
 
-static bool insideTriangle(int x, int y, const Vector3f *_v) {
-    // Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
-    Vector3f p(x + 0.5, y + 0.5, 1);
+float cross_2d(Eigen::Vector3f v1, Eigen::Vector3f v2) {
+    return ((v1.x() * v2.y()) - (v1.y() * v2.x()));
+}
 
-    float z0 = (_v[1] - _v[0]).cross(p - _v[0]).z();
-    float z1 = (_v[2] - _v[1]).cross(p - _v[1]).z();
-    float z2 = (_v[0] - _v[2]).cross(p - _v[2]).z();
+static bool insideTriangle(float x, float y, const Vector3f *_v) {
+    // Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
+    // 在2D平面中判断某点(x,y)是否在三角形内，这里不需要考虑z轴的值！
+    Vector3f p(x, y, 0);
+
+    float z0 = cross_2d(_v[1] - _v[0], p - _v[0]);
+    float z1 = cross_2d(_v[2] - _v[1], p - _v[1]);
+    float z2 = cross_2d(_v[0] - _v[2], p - _v[2]);
 
     return (z0 > 0 && z1 > 0 && z2 > 0) || (z0 < 0 && z1 < 0 && z2 < 0);
 }
 
-static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector3f *v) {
-    float c1 = (x * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * y + v[1].x() * v[2].y() - v[2].x() * v[1].y()) / (v[0].x() * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * v[0].y() + v[1].x() * v[2].y() - v[2].x() * v[1].y());
-    float c2 = (x * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * y + v[2].x() * v[0].y() - v[0].x() * v[2].y()) / (v[1].x() * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * v[1].y() + v[2].x() * v[0].y() - v[0].x() * v[2].y());
-    float c3 = (x * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * y + v[0].x() * v[1].y() - v[1].x() * v[0].y()) / (v[2].x() * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * v[2].y() + v[0].x() * v[1].y() - v[1].x() * v[0].y());
-    return {c1, c2, c3};
+static float computeZInterpolate(float x, float y, const Vector4f *v) {
+    // TODO 待理解 Barycentric2D z interpolate
+    float alpha = (x * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * y + v[1].x() * v[2].y() - v[2].x() * v[1].y()) / (v[0].x() * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * v[0].y() + v[1].x() * v[2].y() - v[2].x() * v[1].y());
+    float beta = (x * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * y + v[2].x() * v[0].y() - v[0].x() * v[2].y()) / (v[1].x() * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * v[1].y() + v[2].x() * v[0].y() - v[0].x() * v[2].y());
+    float gamma = (x * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * y + v[0].x() * v[1].y() - v[1].x() * v[0].y()) / (v[2].x() * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * v[2].y() + v[0].x() * v[1].y() - v[1].x() * v[0].y());
+    float w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+    float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+    z_interpolated *= w_reciprocal;
+    return z_interpolated;
 }
 
 void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf_id col_buffer, Primitive type) {
@@ -95,36 +104,57 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
 
         rasterize_triangle(t);
     }
+
+#ifdef SSAA_ENABLE
+    for (size_t i = 0; i < frame_buf.size(); i++) {
+        frame_buf[i] = (SSAA_frame_buf[4 * i] + SSAA_frame_buf[4 * i + 1] + SSAA_frame_buf[4 * i + 2] + SSAA_frame_buf[4 * i + 3]) / 4;
+    }
+#endif
 }
 
 // Screen space rasterization
 void rst::rasterizer::rasterize_triangle(const Triangle &t) {
-    auto v = t.toVector4();
+    Eigen::Vector4f *v = t.toVector4().data();
 
     // Find out the bounding box of current triangle.
     // iterate through the pixel and find if the current pixel is inside the triangle
-    int x_min = width - 1, x_max = 0;
-    int y_min = height - 1, y_max = 0;
-    for (auto vec : v) {
-        x_min = MIN(vec.x(), x_min);
-        x_max = MAX(vec.x(), x_max);
-        y_min = MIN(vec.y(), y_min);
-        y_max = MAX(vec.y(), y_max);
-    }
-    x_min = MAX(x_min, 0);
-    x_max = MIN(x_max, width - 1);
-    y_min = MAX(y_min, 0);
-    y_max = MIN(y_max, height - 1);
 
+    float x_min = std::min(v[0][0], std::min(v[1][0], v[2][0]));
+    float x_max = std::max(v[0][0], std::max(v[1][0], v[2][0]));
+    float y_min = std::min(v[0][1], std::min(v[1][1], v[2][1]));
+    float y_max = std::max(v[0][1], std::max(v[1][1], v[2][1]));
+
+    x_min = std::max(std::floor(x_min), 0.0f);
+    x_max = std::min(std::ceil(x_max), (float)(width - 1));
+    y_min = std::max(std::floor(y_min), 0.0f);
+    y_max = std::min(std::ceil(y_max), (float)height - 1);
+
+#ifdef SSAA_ENABLE
     for (int x = x_min; x <= x_max; x++) {
         for (int y = y_min; y <= y_max; y++) {
-            if (insideTriangle(x, y, t.v)) {
+            int ind = get_index(x, y) * 4;
+            float xs[] = {0.25, 0.25, 0.75, 0.75};
+            float ys[] = {0.25, 0.75, 0.25, 0.75};
+            for (size_t i = 0; i < 4; i++) {
+                float xx = x + xs[i];
+                float yy = y + ys[i];
+                if (insideTriangle(xx, yy, t.v)) {
+                    float z_interpolated = computeZInterpolate(xx, yy, v);
+                    if (z_interpolated < depth_buf[ind]) {
+                        depth_buf[ind] = z_interpolated;
+                        SSAA_frame_buf[ind] = t.getColor();
+                    }
+                }
+                ind++;
+            }
+        }
+    }
+#else
+    for (int x = x_min; x <= x_max; x++) {
+        for (int y = y_min; y <= y_max; y++) {
+            if (insideTriangle(x + 0.5, y + 0.5, t.v)) {
                 // If so, use the following code to get the interpolated z value.
-                // TODO 待理解
-                auto [alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
-                float w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-                float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-                z_interpolated *= w_reciprocal;
+                float z_interpolated = computeZInterpolate(x, y, v);
                 // set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
                 int ind = get_index(x, y);
                 if (z_interpolated < depth_buf[ind]) {
@@ -134,6 +164,7 @@ void rst::rasterizer::rasterize_triangle(const Triangle &t) {
             }
         }
     }
+#endif
 }
 
 void rst::rasterizer::set_model(const Eigen::Matrix4f &m) {
@@ -151,6 +182,9 @@ void rst::rasterizer::set_projection(const Eigen::Matrix4f &p) {
 void rst::rasterizer::clear(rst::Buffers buff) {
     if ((buff & rst::Buffers::Color) == rst::Buffers::Color) {
         std::fill(frame_buf.begin(), frame_buf.end(), Eigen::Vector3f{0, 0, 0});
+#ifdef SSAA_ENABLE
+        std::fill(SSAA_frame_buf.begin(), SSAA_frame_buf.end(), Eigen::Vector3f{0, 0, 0});
+#endif
     }
     if ((buff & rst::Buffers::Depth) == rst::Buffers::Depth) {
         std::fill(depth_buf.begin(), depth_buf.end(), std::numeric_limits<float>::infinity());
@@ -159,7 +193,12 @@ void rst::rasterizer::clear(rst::Buffers buff) {
 
 rst::rasterizer::rasterizer(int w, int h) : width(w), height(h) {
     frame_buf.resize(w * h);
+#ifdef SSAA_ENABLE
+    SSAA_frame_buf.resize(w * h * 4);
+    depth_buf.resize(w * h * 4);
+#else
     depth_buf.resize(w * h);
+#endif
 }
 
 int rst::rasterizer::get_index(int x, int y) {
