@@ -82,6 +82,40 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float z
     return projection;
 }
 
+void show_depth_map(const std::vector<float> &depth_buf, int width, int height) {
+    cv::Mat depth_map(height, width, CV_32FC1);
+    // Copy data to Mat and handle inf values
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            float val = depth_buf[y * width + x];
+            if (std::isinf(val)) {
+                depth_map.at<float>(y, x) = std::numeric_limits<float>::quiet_NaN();  // Use NaN to ignore in normalization
+            } else {
+                depth_map.at<float>(y, x) = -val;
+            }
+        }
+    }
+
+    // Create a mask of finite values
+    cv::Mat finite_mask = depth_map == depth_map;  // NaN != NaN, so this will be false where NaN
+
+    // Normalize only finite values to 0–255
+    double min_val, max_val;
+    cv::minMaxLoc(depth_map, &min_val, &max_val, nullptr, nullptr, finite_mask);
+
+    cv::Mat normalized;
+    depth_map.setTo(min_val, ~finite_mask);  // Temporarily set NaNs to min for normalization
+    cv::normalize(depth_map, normalized, 0, 255, cv::NORM_MINMAX, CV_8UC1, finite_mask);
+
+    // Optionally apply colormap
+    // cv::Mat color_map;
+    // cv::applyColorMap(normalized, color_map, cv::COLORMAP_JET);
+
+    // Show the result
+    // cv::imshow("Depth Map", color_map);
+    cv::imshow("Depth Map", normalized);
+}
+
 #define CANVAS_SIZE 500
 int main(int argc, const char **argv) {
     float angle_x = 0;
@@ -168,6 +202,8 @@ int main(int argc, const char **argv) {
         image.convertTo(image, CV_8UC3, 1.0f);
         cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
         cv::imshow("image", image);
+
+        show_depth_map(r.depth_buffer(), CANVAS_SIZE, CANVAS_SIZE);
 
     wait_key:
         key = cv::waitKey(0);

@@ -73,6 +73,18 @@ namespace rst
         void draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf_id col_buffer, Primitive type);
 
         std::vector<Eigen::Vector3f>& frame_buffer() { return frame_buf; }
+        std::vector<float> depth_buffer() {
+#ifdef SSAA_ENABLE
+            std::vector<float> __depth_buf;
+            __depth_buf.resize(width * height);
+            for (size_t i = 0; i < __depth_buf.size(); i++) {
+                __depth_buf[i] = (depth_buf[4 * i] + depth_buf[4 * i + 1] + depth_buf[4 * i + 2] + depth_buf[4 * i + 3]) / 4;
+            }
+            return __depth_buf;
+#else
+            return depth_buf;
+#endif
+        }
 
     private:
         void draw_line(Eigen::Vector3f begin, Eigen::Vector3f end);
