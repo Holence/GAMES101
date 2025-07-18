@@ -50,13 +50,17 @@ static bool insideTriangle(float x, float y, const Vector3f *_v) {
 }
 
 static float computeZInterpolate(float x, float y, const Vector4f *v) {
-    // TODO 待理解 Barycentric2D z interpolate
+    // Barycentric 3D z interpolate
     float alpha = (x * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * y + v[1].x() * v[2].y() - v[2].x() * v[1].y()) / (v[0].x() * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * v[0].y() + v[1].x() * v[2].y() - v[2].x() * v[1].y());
     float beta = (x * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * y + v[2].x() * v[0].y() - v[0].x() * v[2].y()) / (v[1].x() * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * v[1].y() + v[2].x() * v[0].y() - v[0].x() * v[2].y());
-    float gamma = (x * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * y + v[0].x() * v[1].y() - v[1].x() * v[0].y()) / (v[2].x() * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * v[2].y() + v[0].x() * v[1].y() - v[1].x() * v[0].y());
+    float gamma = 1 - alpha - beta;
+
+    // 框架代码有问题，正确的代码见pa3
+    // 这里的透视修整算法是对的，但v[].w()取出来的都是1，因为Triangle里面根本没存w的值，就相当于没做修正。
     float w_reciprocal = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
     float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
     z_interpolated *= w_reciprocal;
+
     return z_interpolated;
 }
 
@@ -79,6 +83,8 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
         };
         // Homogeneous division
         for (auto &vec : v) {
+            // 框架代码有问题，正确的代码见pa3
+            // 这里不应该改变w值
             vec /= vec.w();
             vec.z() *= -1;  // 勾八框架非要把z轴看成正数，我只好在这里给你翻转了
         }
@@ -90,8 +96,6 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
         }
 
         for (int i = 0; i < 3; ++i) {
-            t.setVertex(i, v[i].head<3>());
-            t.setVertex(i, v[i].head<3>());
             t.setVertex(i, v[i].head<3>());
         }
 
